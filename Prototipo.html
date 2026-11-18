@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #0f172a; }
+        .dashboard-container { max-w-7xl; mx-auto; padding: 2rem; }
+        .card { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-bottom: 2rem; }
+        .narrative-step { border-left: 4px solid #334155; padding-left: 1rem; margin-bottom: 1.5rem; }
+        .narrative-title { font-size: 1.25rem; font-weight: 600; color: #1e293b; margin-bottom: 0.5rem; }
+        .narrative-text { font-size: 0.95rem; color: #475569; line-height: 1.6; }
+        .legend-box { background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 4px; font-size: 0.85rem; color: #334155; margin-top: 1rem; }
+        .highlight-red { color: #991b1b; font-weight: 600; }
+        .highlight-blue { color: #1e40af; font-weight: 600; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header -->
+    <header class="bg-slate-900 text-white py-10 px-8 mb-8 border-b-4 border-slate-700">
+        <div class="max-w-6xl mx-auto">
+            <h1 class="text-3xl font-bold tracking-tight"></h1>
+            <p class="mt-2 text-slate-300 text-lg">Terra Signal Telecomunicações</p>
+            <p class="text-sm text-slate-400 mt-1 font-mono">Projeto Integrador II | Arquitetura Medalhão: Camada Gold</p>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Passo 1: O Problema -->
+        <div class="narrative-step">
+            <h2 class="narrative-title">1. O Tamanho do Problema</h2>
+            <p class="narrative-text">Antes de entender <em>por que</em> os clientes cancelam, precisamos dimensionar o impacto financeiro. O modelo preditivo identificou o volume de receita atualmente vulnerável na base de dados.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="card border-t-4 border-t-slate-500">
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Acurácia do Modelo (XGBoost)</h3>
+                <p class="text-3xl font-bold text-slate-800 mt-2">78%</p>
+                <p class="text-xs text-slate-500 mt-2">Validação cruzada. Limiar de corte rígido (0.38) para maximizar a captura de falsos negativos.</p>
+            </div>
+            <div class="card border-t-4 border-t-slate-500">
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Taxa de Evasão (Churn Rate)</h3>
+                <p class="text-3xl font-bold text-slate-800 mt-2">26.5%</p>
+                <p class="text-xs text-slate-500 mt-2">Proporção histórica de clientes que encerraram seus contratos com a Terra Signal.</p>
+            </div>
+            <div class="card border-t-4 border-t-red-800 bg-red-50">
+                <h3 class="text-xs font-bold text-red-800 uppercase tracking-wider">Receita Mensal em Risco</h3>
+                <p class="text-3xl font-bold text-red-900 mt-2">$ 153.200</p>
+                <p class="text-xs text-red-700 mt-2">Estimativa de faturamento mensal atrelado a clientes com alta probabilidade de cancelamento.</p>
+            </div>
+        </div>
+
+        <!-- Passo 2: Os Fatores -->
+        <div class="narrative-step">
+            <h2 class="narrative-title">2. O Que o Algoritmo Descobriu? (Importância das Variáveis)</h2>
+            <p class="narrative-text">Ao submeter os dados ao modelo XGBoost, isolamos os atributos que mais influenciam a decisão de cancelamento. O modelo é cego para opiniões, baseando-se estritamente no comportamento e nos contratos.</p>
+        </div>
+        
+        <div class="card">
+            <div id="chart-importance" style="height: 400px;"></div>
+            <div class="legend-box">
+                <strong>Como ler este gráfico:</strong> Barras maiores indicam que o fator tem um peso decisivo no cálculo de risco feito pela Inteligência Artificial. 
+                <br><br>
+                <strong>Conclusão:</strong> O <em>Tipo de Contrato</em> (mensal vs. anual) e a <em>Mensalidade</em> (preço) dominam a decisão do cliente, superando fatores como possuir suporte técnico ou backup.
+            </div>
+        </div>
+
+        <!-- Passo 3: Correlação (O Gráfico de Calor) -->
+        <div class="narrative-step">
+            <h2 class="narrative-title">3. Como os Fatores Interagem? (Matriz de Correlação)</h2>
+            <p class="narrative-text">Sabendo quais fatores importam, precisamos entender a <em>direção</em> desse impacto. Um fator aumenta ou diminui o risco de saída? A Matriz de Correlação responde a isso matematicamente.</p>
+        </div>
+
+        <div class="card">
+            <div id="chart-correlation" style="height: 500px;"></div>
+            <div class="legend-box">
+                <strong>Guia de Leitura do Gráfico de Calor (Heatmap):</strong>
+                <ul class="list-disc pl-5 mt-2 space-y-1">
+                    <li><span class="highlight-red">Tons de Vermelho (Valores Positivos, Ex: +0.22):</span> Indicam que as variáveis caminham juntas. Exemplo: Quanto maior a <strong>Mensalidade</strong>, maior o <strong>Cancelamento</strong>.</li>
+                    <li><span class="highlight-blue">Tons de Azul (Valores Negativos, Ex: -0.35):</span> Indicam forças opostas (Fatores de Retenção). Exemplo: Quanto maior o <strong>Tempo de Permanência</strong> (fidelidade), menor a chance de <strong>Cancelamento</strong>.</li>
+                    <li><span class="font-semibold text-slate-600">Tons Cinza/Branco (Próximo a Zero):</span> Indicam que não há relação matemática direta entre as duas coisas.</li>
+                </ul>
+                <div class="mt-3 border-t pt-2 border-slate-200">
+                    <strong>Conclusão Central:</strong> Clientes com dependentes (filhos) apresentam tom azulado (-0.16) com o Cancelamento, provando que famílias tendem a ser mais estáveis e fiéis à operadora.
+                </div>
+            </div>
+        </div>
+
+        <!-- Passo 4: Quem é o cliente -->
+        <div class="narrative-step">
+            <h2 class="narrative-title">4. Cruzamento: Perfil do Cliente vs. Impacto no Caixa</h2>
+            <p class="narrative-text">O gráfico de correlação mostrou que clientes com famílias são mais estáveis. Mas onde a empresa perde mais dinheiro? Este painel cruza a taxa de evasão de cada grupo demográfico com o volume absoluto de dólares perdidos.</p>
+        </div>
+
+        <div class="card">
+            <div id="chart-profiles" style="height: 500px;"></div>
+            <div class="legend-box">
+                <strong>Como ler este gráfico:</strong> As barras vermelhas representam a porcentagem de clientes daquele grupo que cancelaram (lidas no eixo esquerdo). A linha azul representa o dinheiro total perdido com essas saídas (lido no eixo direito).
+                <br><br>
+                <strong>Conclusão:</strong> Há uma ilusão de ótica comercial. O grupo <em>"Idosos - Solteiros"</em> tem a maior taxa de fuga percentual (quase 50%). Porém, é o grupo <em>"Não-Idosos - Solteiros"</em> que gera o maior buraco financeiro (linha azul no pico de $46.000), pois formam a maior parte da base de clientes absolutos. A equipe de retenção deve focar nos solteiros jovens para estancar o sangramento financeiro.
+            </div>
+        </div>
+
+        <!-- Passo 5: NLP -->
+        <div class="narrative-step">
+            <h2 class="narrative-title">5. A Voz do Cliente: Por que eles realmente saem?</h2>
+            <p class="narrative-text">Por fim, utilizamos Processamento de Linguagem Natural (NLP) para ler milhares de feedbacks deixados no momento do cancelamento. Mapeamos as reais dores operacionais cruzadas com os perfis.</p>
+        </div>
+
+        <div class="card">
+            <div id="chart-feedback" style="height: 500px;"></div>
+            <div class="legend-box">
+                <strong>Como ler este gráfico:</strong> Cada barra representa 100% dos clientes de um perfil que cancelaram. As cores dividem o motivo real que eles digitaram no formulário de saída.
+                <br><br>
+                <strong>Conclusão:</strong> O <em>Atrito no Método de Pagamento</em> (barras escuras) é uma falha sistêmica da Terra Signal. Independentemente de ser um idoso ou um jovem solteiro, cerca de 70% a 80% das evasões citam problemas com boletos (checks), métodos desatualizados ou dificuldade em pagar. Resolver o gateway de pagamento reduzirá drasticamente o churn sem precisar baixar preços.
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Scripts dos Gráficos -->
+    <script>
+        const colorNavy = '#1e293b';
+        const colorRed = '#991b1b';
+        const colorBlue = '#1e40af';
+        const colorGrey = '#94a3b8';
+        const colorLightGrey = '#e2e8f0';
+
+        // 1. Feature Importance
+        const dataImp = [{
+            type: 'bar',
+            x: [0.04, 0.05, 0.06, 0.08, 0.09, 0.12, 0.18, 0.25],
+            y: ['Streaming Filmes', 'Múltiplas Linhas', 'Backup Online', 'Tempo (Meses)', 'Segurança Online', 'Suporte Técnico', 'Mensalidade ($)', 'Tipo de Contrato'],
+            orientation: 'h',
+            marker: { color: colorNavy }
+        }];
+        Plotly.newPlot('chart-importance', dataImp, {
+            margin: { l: 140, r: 30, t: 20, b: 50 },
+            xaxis: { title: 'Força de Impacto na Decisão de Cancelar', gridcolor: colorLightGrey },
+            paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)'
+        }, {responsive: true});
+
+        // 2. Correlation Heatmap
+        const labelsCorr = ['Cancelamento', 'Tempo Permanência', 'Mensalidade', 'Idoso', 'Tem Dependentes'];
+        const zValues = [
+            [1.00, -0.35,  0.19,  0.15, -0.16],
+            [-0.35, 1.00,  0.25,  0.02,  0.16],
+            [ 0.19, 0.25,  1.00,  0.22, -0.11],
+            [ 0.15, 0.02,  0.22,  1.00, -0.21],
+            [-0.16, 0.16, -0.11, -0.21,  1.00]
+        ];
+        
+        // Criar anotações para mostrar os números dentro das células
+        const annotations = [];
+        for (let i = 0; i < labelsCorr.length; i++) {
+            for (let j = 0; j < labelsCorr.length; j++) {
+                let val = zValues[i][j];
+                let textColor = (val > 0.4 || val < -0.4) ? 'white' : 'black';
+                annotations.push({
+                    x: labelsCorr[j], y: labelsCorr[i],
+                    text: val.toFixed(2),
+                    font: { color: textColor, size: 12 },
+                    showarrow: false
+                });
+            }
+        }
+
+        Plotly.newPlot('chart-correlation', [{
+            z: zValues, x: labelsCorr, y: labelsCorr,
+            type: 'heatmap',
+            colorscale: [
+                ['0.0', '#1e40af'], // Azul escuro
+                ['0.5', '#f8fafc'], // Branco
+                ['1.0', '#991b1b']  // Vermelho escuro
+            ],
+            zmin: -1, zmax: 1,
+            colorbar: { title: 'Correlação (r)' }
+        }], {
+            margin: { l: 130, r: 20, t: 20, b: 80 },
+            annotations: annotations,
+            paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)'
+        }, {responsive: true});
+
+        // 3. Profiles (Barras + Linha)
+        const perfis = ['Família', 'Casal', 'Filhos', 'Idoso(Família)', 'Idoso(Filhos)', 'Idoso(Casal)', 'Solteiro', 'Idoso(Solteiro)'];
+        const taxaChurn = [13.4, 21.6, 21.8, 25.4, 33.3, 37.9, 31.0, 48.8];
+        const receita = [13466, 16334, 4016, 1342, 121, 12973, 46706, 17282];
+        
+        Plotly.newPlot('chart-profiles', [
+            { name: 'Taxa de Evasão (%)', type: 'bar', x: perfis, y: taxaChurn, marker: { color: colorRed } },
+            { name: 'Receita Perdida ($)', type: 'scatter', mode: 'lines+markers', x: perfis, y: receita, yaxis: 'y2', marker: { color: colorNavy, size: 8 }, line: { width: 3 } }
+        ], {
+            margin: { l: 50, r: 60, t: 40, b: 80 },
+            legend: { orientation: 'h', y: -0.2, x: 0.1 },
+            yaxis: { title: 'Evasão (%)', tickcolor: colorRed, titlefont: {color: colorRed}, tickfont: {color: colorRed} },
+            yaxis2: { title: 'Receita USD ($)', overlaying: 'y', side: 'right', titlefont: {color: colorNavy}, tickfont: {color: colorNavy} },
+            paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+            hovermode: 'x unified'
+        }, {responsive: true});
+
+        // 4. Feedback (Stacked Bar)
+        const fbPerfis = ['Família', 'Idoso(Família)', 'Solteiro', 'Idoso(Solteiro)'];
+        Plotly.newPlot('chart-feedback', [
+            { name: 'Falha/Atrito no Pagamento', type: 'bar', x: fbPerfis, y: [79.5, 72.7, 69.0, 70.3], marker: { color: '#334155' } },
+            { name: 'Internet Lenta/Qualidade', type: 'bar', x: fbPerfis, y: [20.5, 27.3, 31.0, 29.7], marker: { color: '#cbd5e1' } }
+        ], {
+            barmode: 'stack',
+            margin: { l: 50, r: 20, t: 30, b: 50 },
+            legend: { orientation: 'h', y: -0.2, x: 0.1 },
+            yaxis: { title: 'Proporção de Reclamações (%)', gridcolor: colorLightGrey },
+            paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)'
+        }, {responsive: true});
+
+    </script>
+</body>
+</html>
