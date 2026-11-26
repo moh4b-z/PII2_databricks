@@ -103,7 +103,21 @@
         </div>
 
         <div class="narrative-step">
-            <h2 class="narrative-title">5. O pior cliente possível</h2>
+            <h2 class="narrative-title">5. O dinheiro que esses valores levaram</h2>
+            <p class="narrative-text">O gráfico anterior mostra a taxa. Este mostra a mensalidade somada de quem já cancelou em cada um desses mesmos valores. A taxa mais alta não é o maior buraco: até 9 meses sai em 49%, mas o contrato mês a mês leva <span class="highlight-red">US$ 96.852</span> por mês, e a fibra óptica, <span class="highlight-red">US$ 92.169</span>. O idoso, recorte do outro notebook, sai em 42,3%, porém o grupo é menor e o valor que saiu fica em US$ 31.719.</p>
+        </div>
+
+        <div class="card">
+            <div id="chart-financeiro-saida" style="height: 460px;"></div>
+            <div class="legend-box">
+                <strong>Como ler:</strong> cada barra é a soma da cobrança mensal dos clientes daquele valor que cancelaram. A ordem é a mesma do gráfico anterior, para comparar taxa e dinheiro.
+                <br><br>
+                <strong>Leitura:</strong> um cliente pode entrar em mais de uma barra, por exemplo mês a mês e fibra ao mesmo tempo. As barras não se somam. Contrato mês a mês, fibra e falta de segurança pesam mais no caixa do que o pico de taxa dos primeiros meses.
+            </div>
+        </div>
+
+        <div class="narrative-step">
+            <h2 class="narrative-title">6. O pior cliente possível</h2>
             <p class="narrative-text">O pior perfil empilha, em cada coluna, o valor que mais acompanhou cancelamento no passado. Não é uma pessoa obrigatoriamente presente na base: é a combinação mais associada à saída. Gênero, renda e linha telefônica ficam de fora porque a taxa deles cola na média.</p>
         </div>
 
@@ -117,16 +131,16 @@
         </div>
 
         <div class="narrative-step">
-            <h2 class="narrative-title">6. O cliente que permanece</h2>
-            <p class="narrative-text">O outro extremo usa a mesma conta, escolhendo o valor de menor taxa em cada coluna. O contraste mostra o que segura o cliente. Vários serviços repetem o mesmo grupo, “sem internet”, com a mesma taxa de 7,2%. O gráfico mostra cada sinal uma vez.</p>
+            <h2 class="narrative-title">7. O dinheiro que fica com quem permanece</h2>
+            <p class="narrative-text">O espelho do gráfico de dinheiro, agora nos valores que mais seguram o cliente. A barra é a mensalidade somada de quem continua na base. O outro notebook olha a vida pessoal: cônjuge, dependentes e idade. Quem tem cônjuge segura <span class="highlight-blue">US$ 140.331</span> por mês. Quem tem dependentes segura US$ 80.532. Contrato de dois anos e casa de 55 a 72 meses completam o grupo que permanece.</p>
         </div>
 
         <div class="card">
-            <div id="chart-melhor" style="height: 420px;"></div>
+            <div id="chart-financeiro-fica" style="height: 460px;"></div>
             <div class="legend-box">
-                <strong>Como ler:</strong> a escala é a mesma do pior cliente, para os dois gráficos serem comparados. Aqui as barras ficam à esquerda da linha.
+                <strong>Como ler:</strong> cada barra é a soma da cobrança mensal de quem tem aquele valor e não cancelou. Quanto mais longa, mais receita mensal aquele grupo ainda sustenta.
                 <br><br>
-                <strong>Leitura:</strong> contrato de dois anos sai em 3,3%. Quem está há 55 a 72 meses sai em 8,0%. Quem não tem internet sai em 7,2%. Mensalidade baixa, dependentes e cartão de crédito também ficam abaixo da média.
+                <strong>Leitura:</strong> sem internet tem a taxa de saída mais baixa entre os serviços (7,2%), mas a mensalidade que fica é pequena, US$ 24.192. Cônjuge e tempo longo de casa seguram bem mais dinheiro. As barras também se sobrepõem: a mesma pessoa pode ter cônjuge e contrato de dois anos.
             </div>
         </div>
 
@@ -286,33 +300,53 @@
             }]
         }, { responsive: true });
 
-        Plotly.newPlot('chart-melhor', [{
+        Plotly.newPlot('chart-financeiro-saida', [{
             type: 'bar',
             orientation: 'h',
             y: [
-                'Pagamento: cartão de crédito',
-                'Tem dependentes',
-                'Mensalidade: US$ 18 a 35',
-                'Tempo: 55 a 72 meses',
-                'Sem serviço de internet',
-                'Contrato: dois anos'
+                'Sem suporte técnico',
+                'Sem segurança online',
+                'Internet: fibra óptica',
+                'Idoso',
+                'Cobrança acumulada até US$ 403',
+                'Contrato mês a mês',
+                'Pagamento: cheque eletrônico',
+                'Até 9 meses de casa'
             ],
-            x: [15.6, 15.3, 11.0, 8.0, 7.2, 3.3],
-            marker: { color: colorStay },
-            text: ['15,6%', '15,3%', '11,0%', '8,0%', '7,2%', '3,3%'],
+            x: [89612, 90886, 92169, 31719, 35662, 96852, 67442, 47403],
+            marker: { color: colorRed },
+            text: ['US$ 89.612', 'US$ 90.886', 'US$ 92.169', 'US$ 31.719', 'US$ 35.662', 'US$ 96.852', 'US$ 67.442', 'US$ 47.403'],
             textposition: 'outside',
             cliponaxis: false,
-            hovertemplate: '%{y}: %{x:.1f}% de saída<extra></extra>'
+            hovertemplate: '%{y}<br>mensalidade de quem saiu: US$ %{x:,.0f}<extra></extra>'
         }], {
             ...baseLayout,
-            margin: { l: 230, r: 55, t: 24, b: 50 },
-            xaxis: { title: 'Taxa de saída desse valor (%)', range: [0, 64], gridcolor: colorGrid },
-            shapes: [linhaTaxaGeral()],
-            annotations: [{
-                x: taxaGeral, y: 1.06, xref: 'x', yref: 'paper',
-                text: 'Taxa geral 26,7%', showarrow: false,
-                font: { color: colorBlue, size: 12 }
-            }]
+            margin: { l: 230, r: 90, t: 20, b: 50 },
+            xaxis: { title: 'Mensalidade somada de quem cancelou (US$)', range: [0, 125000], gridcolor: colorGrid }
+        }, { responsive: true });
+
+        Plotly.newPlot('chart-financeiro-fica', [{
+            type: 'bar',
+            orientation: 'h',
+            y: [
+                'Sem serviço de internet',
+                'Mensalidade: US$ 18 a 35',
+                'Pagamento: cartão de crédito',
+                'Contrato: dois anos',
+                'Com dependentes',
+                'Tempo: 55 a 72 meses',
+                'Com cônjuge'
+            ],
+            x: [24192, 27485, 66919, 77392, 80532, 94366, 140331],
+            marker: { color: colorStay },
+            text: ['US$ 24.192', 'US$ 27.485', 'US$ 66.919', 'US$ 77.392', 'US$ 80.532', 'US$ 94.366', 'US$ 140.331'],
+            textposition: 'outside',
+            cliponaxis: false,
+            hovertemplate: '%{y}<br>mensalidade de quem ficou: US$ %{x:,.0f}<extra></extra>'
+        }], {
+            ...baseLayout,
+            margin: { l: 220, r: 100, t: 20, b: 50 },
+            xaxis: { title: 'Mensalidade somada de quem permaneceu (US$)', range: [0, 180000], gridcolor: colorGrid }
         }, { responsive: true });
     </script>
 </body>
