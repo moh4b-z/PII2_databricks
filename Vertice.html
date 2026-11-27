@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Análise de Churn · Vértice Data Consulting × Terra Signal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              navy: '#1D3557',
+              blue: '#457B9D',
+              red: '#E63946',
+              coral: '#E76F51',
+              teal: '#2A9D8F',
+              amber: '#F4A261',
+              slate: '#8D99AE'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.4); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.65); }
+    .word-chip { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+    .word-chip:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .zoom-card .top3-peek {
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .zoom-card:hover .top3-peek {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased selection:bg-brand-blue selection:text-white transition-colors duration-200">
+
+  <header class="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4 py-3.5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-navy to-brand-blue flex items-center justify-center text-white font-extrabold text-lg shadow-sm">
+            VD
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h1 class="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+                Vértice Data Consulting <span class="text-slate-400 font-normal">×</span> <span class="text-brand-blue dark:text-sky-400">Terra Signal</span>
+              </h1>
+              <span id="data-source-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                Base Terra Signal
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Análise Exploratória de Cancelamentos, Feedbacks e Retenção de Clientes
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <label for="csv-upload" class="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 transition">
+            <svg class="w-4 h-4 text-brand-blue" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            <span>Importar CSV</span>
+          </label>
+          <input id="csv-upload" type="file" accept=".csv" class="hidden" />
+
+          <button id="theme-toggle" type="button" aria-label="Alternar tema" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 transition">
+            <svg id="icon-sun" class="w-4 h-4 hidden dark:block text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <svg id="icon-moon" class="w-4 h-4 block dark:hidden text-slate-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <nav class="flex gap-1 overflow-x-auto pb-px -mb-px" aria-label="Seções do painel">
+        <button data-tab="resumo-projeto" class="nav-tab whitespace-nowrap px-4 py-2.5 text-sm font-semibold border-b-2 border-brand-navy text-brand-navy dark:border-sky-400 dark:text-sky-400 transition">
+          Resumo do Projeto
+        </button>
+        <button data-tab="visao-geral" class="nav-tab whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition">
+          Visão Geral
+        </button>
+        <button data-tab="impacto-fatores" class="nav-tab whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition">
+          Impacto &amp; Fatores
+        </button>
+        <button data-tab="feedback-nlp" class="nav-tab whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition">
+          Feedbacks (DistilBERT)
+        </button>
+        <button data-tab="perfis" class="nav-tab whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition">
+          Pior vs. Melhor Perfil
+        </button>
+        <button data-tab="simulador" class="nav-tab whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition">
+          Simulador de Saída
+        </button>
+        <button data-tab="financeiro" class="nav-tab whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition">
+          Impacto Financeiro
+        </button>
+        <button data-tab="como-melhorar" class="nav-tab whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition">
+          Como Melhorar
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm"></div>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <section id="tab-resumo-projeto" class="tab-panel space-y-6">
+
+      <div class="rounded-2xl p-6 bg-gradient-to-r from-brand-navy via-[#24476e] to-brand-blue text-white shadow-md">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="space-y-1.5 max-w-2xl">
+            <div class="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-sky-200">
+              <span>Vértice Data Consulting</span>
+              <span class="opacity-60">•</span>
+              <span>Terra Signal</span>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight">
+              Por que os clientes cancelam e como melhorar a retenção
+            </h2>
+            <p class="text-xs sm:text-sm text-sky-100/90 leading-relaxed">
+              Análise exploratória dos dados históricos da <strong>Terra Signal</strong> para descobrir o que faz um cliente cancelar o serviço, quanto isso custa por mês e quais ações práticas ajudam a segurar a base.
+            </p>
+          </div>
+          <div class="shrink-0 flex flex-col items-start md:items-end gap-1 text-xs text-sky-100 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/15">
+            <span class="font-semibold text-white">Cliente: Terra Signal</span>
+            <span>Consultoria: Vértice Data Consulting</span>
+            <span class="text-[11px] text-sky-200">Base: history_traduzido.csv</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-2">
+          <div class="flex items-center gap-2.5">
+            <span class="w-3 h-3 rounded-full bg-brand-red"></span>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">O Problema</h2>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            A <strong>Terra Signal</strong> está perdendo assinantes e precisava entender quais clientes têm mais chance de cancelar e por qual motivo eles vão embora.
+          </p>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-2">
+          <div class="flex items-center gap-2.5">
+            <span class="w-3 h-3 rounded-full bg-brand-blue"></span>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">O Objetivo</h2>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            Encontrar os principais fatores ligados ao cancelamento, ler o que os clientes escrevem nos feedbacks, medir o impacto no faturamento e propor melhorias diretas para reter mais clientes.
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Sobre a Base e o Preparo dos Dados</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">O que veio no arquivo e o que foi ajustado antes da análise</p>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+            Arquivo: history_traduzido.csv
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/70 space-y-1.5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-navy dark:text-sky-400">1. O que tem na base</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Dados de clientes da Terra Signal com informações de perfil, contrato, serviços usados, cobrança, se cancelou (<code class="font-mono">cancelamento_servico</code>) e o comentário escrito (<code class="font-mono">feedback_cliente</code>).
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/70 space-y-1.5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-blue dark:text-sky-400">2. Idioma original mantido</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Apenas os nomes das colunas foram traduzidos para português. Os valores das respostas e os feedbacks foram mantidos em inglês, no idioma original, para não distorcer os textos na análise de sentimento.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/70 space-y-1.5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-teal">3. Tipos já corretos</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Conferimos a base e todas as variáveis já estavam no tipo certo (números e textos corretos), sem precisar de conversões complexas. Só trocamos <code class="font-mono">idoso</code> de 0 e 1 para Não e Sim para facilitar a leitura.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white">O que Foi Feito na Análise</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Passo a passo simples da nossa análise exploratória</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/70">
+            <span class="text-[11px] font-extrabold text-brand-navy dark:text-sky-400">Etapa 01</span>
+            <h3 class="text-xs font-bold text-slate-900 dark:text-white mt-0.5">Leitura da Base</h3>
+            <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1">Conferência dos dados, tipos das colunas e taxa geral de cancelamento.</p>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/70">
+            <span class="text-[11px] font-extrabold text-brand-blue dark:text-sky-400">Etapa 02</span>
+            <h3 class="text-xs font-bold text-slate-900 dark:text-white mt-0.5">Fatores de Saída</h3>
+            <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1">Comparação da taxa de cancelamento em cada característica dos clientes.</p>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/70">
+            <span class="text-[11px] font-extrabold text-brand-teal">Etapa 03</span>
+            <h3 class="text-xs font-bold text-slate-900 dark:text-white mt-0.5">Análise de Feedbacks</h3>
+            <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1">Leitura das palavras mais usadas e notas positivas/negativas com DistilBERT.</p>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/70">
+            <span class="text-[11px] font-extrabold text-brand-coral">Etapa 04</span>
+            <h3 class="text-xs font-bold text-slate-900 dark:text-white mt-0.5">Perfis &amp; Simulador</h3>
+            <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1">Montagem do pior e do melhor perfil e estimativa de chance de saída.</p>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/70">
+            <span class="text-[11px] font-extrabold text-amber-600 dark:text-amber-400">Etapa 05</span>
+            <h3 class="text-xs font-bold text-slate-900 dark:text-white mt-0.5">Financeiro &amp; Ações</h3>
+            <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1">Quanto se perde por mês e o que fazer na prática para segurar os clientes.</p>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+          <button onclick="switchTab('visao-geral')" class="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-navy text-white hover:bg-brand-blue transition shadow-sm">
+            Avançar para Visão Geral →
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <section id="tab-visao-geral" class="tab-panel hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <div class="mb-4">
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Situação Geral da Base</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Proporção total entre clientes que ficaram e clientes que cancelaram</p>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="chart-carteira"></canvas>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <div class="flex flex-wrap items-start justify-between gap-2 mb-4">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 dark:text-white">Recorte Demográfico: Idoso por Gênero</h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Taxa de cancelamento em Idoso (Sim vs. Não) dividida internamente entre Mulher e Homem</p>
+            </div>
+            <div class="flex items-center gap-3 text-xs">
+              <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-[#E76F51] inline-block"></span> Mulher</span>
+              <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-[#457B9D] inline-block"></span> Homem</span>
+            </div>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="chart-demografia"></canvas>
+          </div>
+          <p class="mt-3 text-[11px] text-slate-500 dark:text-slate-400">
+            Idosos cancelam bem mais (41,9% contra 23,7%), mas dentro de cada grupo a divisão entre homens e mulheres é praticamente igual, mostrando que o gênero não define o cancelamento.
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Principais Variáveis que Influenciam o Cancelamento</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Taxa de saída (%) em cada grupo comparada à linha tracejada da média geral (26,7%)</p>
+          </div>
+          <div class="flex items-center gap-4 text-xs">
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-brand-red inline-block"></span> Maior risco</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-brand-slate inline-block"></span> Intermediário</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-brand-teal inline-block"></span> Menor risco</span>
+          </div>
+        </div>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-5 bg-slate-50 dark:bg-slate-800/60 px-3 py-2 rounded-lg border border-slate-200/70 dark:border-slate-700/60">
+          <strong>O que significa p.p.?</strong> É a sigla para <strong>pontos percentuais</strong>, ou seja, a diferença direta entre a maior e a menor taxa de cancelamento daquela coluna (exemplo: 49,4% menos 6,7% = 42,7 p.p.).
+        </p>
+        <div id="top6-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+      </div>
+    </section>
+
+    <section id="tab-impacto-fatores" class="tab-panel hidden space-y-6">
+      <div id="card-extremos" class="zoom-card bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm transition-all duration-200 hover:border-brand-blue/70 hover:shadow-md">
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Fatores que Mais Aumentam vs. Reduzem o Cancelamento</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Diferença em pontos percentuais (p.p.: distância direta em relação à média geral de 26,7%). Valores positivos em vermelho puxam o cancelamento para cima; negativos em verde seguram o cliente.
+            </p>
+          </div>
+          <span class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
+            Passe o mouse para focar nos 3 maiores e 3 menores
+          </span>
+        </div>
+
+        <div id="peek-extremos-top3" class="top3-peek mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]"></div>
+
+        <div class="h-[580px] relative">
+          <canvas id="chart-extremos"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-feedback-nlp" class="tab-panel hidden space-y-6">
+      <div class="bg-gradient-to-r from-brand-navy to-brand-blue rounded-2xl p-6 text-white shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/15 text-white">
+              Análise de Texto · Modelo DistilBERT
+            </span>
+            <h2 class="text-lg sm:text-xl font-bold">O que os Clientes Escrevem nos Feedbacks</h2>
+            <p class="text-xs sm:text-sm text-sky-100 max-w-2xl">
+              Analisamos <code class="bg-white/15 px-1.5 py-0.5 rounded text-xs">1.271 termos únicos</code> nos comentários originais em inglês e classificamos cada comentário como positivo ou negativo usando o DistilBERT.
+            </p>
+          </div>
+          <div class="grid grid-cols-2 gap-3 shrink-0">
+            <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3.5 text-center border border-white/15">
+              <div class="text-xl font-extrabold">91,4%</div>
+              <div class="text-[11px] text-sky-100">Negativos (Cancelou)</div>
+            </div>
+            <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3.5 text-center border border-white/15">
+              <div class="text-xl font-extrabold">84,6%</div>
+              <div class="text-[11px] text-sky-100">Positivos (Retidos)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Palavras Frequentes · Clientes que Cancelaram</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Reclamações ligadas a preço, suporte demorado, quedas e concorrência</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 dark:bg-red-950/60 text-brand-red">Negativo</span>
+          </div>
+          <div id="cloud-cancelou" class="flex flex-wrap items-center gap-2.5 p-4 rounded-xl bg-red-50/40 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 min-h-[210px]"></div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Palavras Frequentes · Clientes que Permaneceram</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Elogios ligados a estabilidade, velocidade, atendimento ágil e bom custo-benefício</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 dark:bg-teal-950/60 text-brand-teal">Positivo</span>
+          </div>
+          <div id="cloud-retido" class="flex flex-wrap items-center gap-2.5 p-4 rounded-xl bg-teal-50/40 dark:bg-teal-950/20 border border-teal-100 dark:border-teal-900/40 min-h-[210px]"></div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 dark:text-white">Comparação Rápida: Notas Positivas vs. Negativas (DistilBERT)</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Cada comentário recebe exclusivamente uma nota: Negativa ou Positiva</p>
+          </div>
+          <div class="flex items-center gap-4 text-xs">
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-brand-red inline-block"></span> Nota Negativa</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-brand-teal inline-block"></span> Nota Positiva</span>
+          </div>
+        </div>
+        <div class="h-44 relative">
+          <canvas id="chart-feedback-sentimento"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-perfis" class="tab-panel hidden space-y-6">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <h2 class="text-base font-bold text-slate-900 dark:text-white">Contraste Direto: Pior vs. Melhor Perfil de Cliente</h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          Abaixo estão reunidas todas as características que mais aumentam o risco de saída (à esquerda) e todas as características que mais retêm o cliente (à direita). Clique em qualquer botão para carregar o perfil no simulador.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-red-200/80 dark:border-red-900/50 shadow-sm overflow-hidden">
+          <div class="p-5 bg-red-50/70 dark:bg-red-950/30 border-b border-red-200/70 dark:border-red-900/50 flex items-center justify-between gap-3">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-brand-red">Perfil de Maior Risco</span>
+              <h3 class="text-lg font-extrabold text-slate-900 dark:text-white mt-0.5">Média combinada: <span id="avg-pior" class="text-brand-red">37,0%</span></h3>
+            </div>
+            <button onclick="applyPresetToSimulator('pior')" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-brand-red text-white hover:opacity-90 transition shadow-sm shrink-0">
+              Simular este perfil →
+            </button>
+          </div>
+          <div id="list-pior-perfil" class="divide-y divide-slate-100 dark:divide-slate-800 max-h-[540px] overflow-y-auto"></div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-teal-200/80 dark:border-teal-900/50 shadow-sm overflow-hidden">
+          <div class="p-5 bg-teal-50/70 dark:bg-teal-950/30 border-b border-teal-200/70 dark:border-teal-900/50 flex items-center justify-between gap-3">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-brand-teal">Perfil de Maior Retenção</span>
+              <h3 class="text-lg font-extrabold text-slate-900 dark:text-white mt-0.5">Média combinada: <span id="avg-melhor" class="text-brand-teal">14,4%</span></h3>
+            </div>
+            <button onclick="applyPresetToSimulator('melhor')" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-brand-teal text-white hover:opacity-90 transition shadow-sm shrink-0">
+              Simular este perfil →
+            </button>
+          </div>
+          <div id="list-melhor-perfil" class="divide-y divide-slate-100 dark:divide-slate-800 max-h-[540px] overflow-y-auto"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-simulador" class="tab-panel hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 space-y-5">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-bold text-slate-900 dark:text-white">Simulador de Probabilidade de Saída</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Teste combinações de características de um cliente</p>
+              </div>
+              <span id="sim-risk-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                Risco Moderado
+              </span>
+            </div>
+
+            <div class="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 text-center space-y-3">
+              <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Probabilidade Estimada de Saída
+              </div>
+              <div id="sim-score-value" class="text-5xl font-extrabold tracking-tight text-brand-navy dark:text-white tabular-nums">
+                26,7%
+              </div>
+              <div id="sim-diff-base" class="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                +0,0 p.p. em relação à taxa geral (26,7%)
+              </div>
+
+              <div class="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mt-2">
+                <div id="sim-progress-bar" class="h-full bg-brand-blue transition-all duration-300 rounded-full" style="width: 26.7%"></div>
+              </div>
+              <div class="flex justify-between text-[11px] text-slate-400">
+                <span>14,4% (Mínimo)</span>
+                <span>26,7% (Média)</span>
+                <span>37,0% (Máximo)</span>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-xl bg-sky-50/80 dark:bg-sky-950/30 border border-sky-200/80 dark:border-sky-900/50 space-y-1.5">
+              <h3 class="text-xs font-bold text-brand-navy dark:text-sky-300">Como calculamos essa probabilidade?</h3>
+              <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                Cada opção escolhida ao lado tem sua taxa histórica real de cancelamento na base da Terra Signal (o percentual mostrado entre parênteses). Para chegar ao resultado final acima, somamos as taxas das <strong>20 características escolhidas</strong> e fazemos a <strong>média simples</strong> entre elas. Assim, quanto mais sinais de risco o cliente acumula, maior fica a nota.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" onclick="applyPresetToSimulator('pior')" class="px-3 py-2 rounded-xl text-xs font-semibold bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-950 text-brand-red border border-red-200/70 dark:border-red-900/60 transition">
+                Pior Perfil
+              </button>
+              <button type="button" onclick="applyPresetToSimulator('neutro')" class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/70 dark:border-slate-700 transition">
+                Perfil Médio
+              </button>
+              <button type="button" onclick="applyPresetToSimulator('melhor')" class="px-3 py-2 rounded-xl text-xs font-semibold bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/50 dark:hover:bg-teal-950 text-brand-teal border border-teal-200/70 dark:border-teal-900/60 transition">
+                Melhor Perfil
+              </button>
+            </div>
+
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">
+                Fatores que Mais Pesam Nesse Perfil (em p.p. vs. média)
+              </h3>
+              <div id="sim-top-drivers" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <div class="mb-4">
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Atributos do Cliente (20 Variáveis)</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Altere os valores abaixo para recalcular instantaneamente o risco de saída</p>
+          </div>
+          <div id="sim-controls-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-financeiro" class="tab-panel hidden space-y-6">
+
+      <div class="rounded-2xl p-6 bg-gradient-to-r from-brand-navy via-[#24476e] to-brand-blue text-white shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="space-y-1 max-w-2xl">
+            <div class="text-xs font-bold uppercase tracking-wider text-sky-200">
+              Vértice Data Consulting · Análise de Receita e Perda
+            </div>
+            <h2 class="text-lg sm:text-xl font-extrabold">Impacto Financeiro do Churn na Terra Signal</h2>
+            <p class="text-xs sm:text-sm text-sky-100/90 leading-relaxed">
+              Quanto a Terra Signal perde por mês com quem cancela (mensalidade média de $74,49) em comparação com a receita mensal mantida pelos clientes fiéis.
+            </p>
+          </div>
+          <div class="px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-xs text-sky-100 shrink-0">
+            <div class="font-semibold text-white">Receita Mensal Total da Base</div>
+            <div class="text-lg font-extrabold text-amber-300 mt-0.5">$365.083 / mês</div>
+            <div class="text-[11px] opacity-80">Ticket médio geral: $64,80</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-red-200/80 dark:border-red-900/50 shadow-sm">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Prejuízo Mensal Direto</span>
+          <div class="mt-2 text-2xl font-extrabold text-brand-red">-$111.958</div>
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">1.503 cancelamentos × $74,49/mês</p>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-red-200/80 dark:border-red-900/50 shadow-sm">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Prejuízo Anualizado</span>
+          <div class="mt-2 text-2xl font-extrabold text-brand-coral">-$1,34M</div>
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Perda recorrente acumulada em 12 meses</p>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-teal-200/80 dark:border-teal-900/50 shadow-sm">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Lucro / Receita Retida</span>
+          <div class="mt-2 text-2xl font-extrabold text-brand-teal">+$253.125</div>
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">4.131 clientes ativos × $61,27/mês</p>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-sky-200/80 dark:border-sky-900/50 shadow-sm">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Ganho se Reter 25% do Churn</span>
+          <div class="mt-2 text-2xl font-extrabold text-brand-blue dark:text-sky-400">+$27.990</div>
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Recuperação de +$335.875 ao ano</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-6 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <div class="mb-4">
+            <h3 class="text-base font-bold text-slate-900 dark:text-white">Rendimento Mensal Gerado pelos Melhores Valores</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Receita mensal ativa ($) sustentada pelos melhores grupos das principais colunas</p>
+          </div>
+          <div class="h-80 relative">
+            <canvas id="chart-fin-lucro"></canvas>
+          </div>
+        </div>
+
+        <div class="lg:col-span-6 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <div class="mb-4">
+            <h3 class="text-base font-bold text-slate-900 dark:text-white">Prejuízo Mensal nos Piores Grupos (Onde Mais Perde)</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Perda mensal direta ($) provocada pelos cancelamentos nos piores cenários</p>
+          </div>
+          <div class="h-80 relative">
+            <canvas id="chart-fin-prejuizo"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-red-50/60 dark:bg-red-950/20 rounded-2xl p-5 border border-red-200/80 dark:border-red-900/50 space-y-2">
+          <h3 class="text-sm font-bold text-brand-red">Onde Está o Maior Prejuízo da Terra Signal</h3>
+          <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+            O contrato <strong>Month-to-month</strong> sozinho responde por <strong>$99.518/mês</strong> em receita perdida (88,9% de todo o prejuízo de churn), seguido pelos clientes de <strong>Fiber optic</strong>, que têm mensalidade mais alta ($88,12/mês) e geram perda de <strong>$91.468/mês</strong> ao sair.
+          </p>
+        </div>
+
+        <div class="bg-teal-50/60 dark:bg-teal-950/20 rounded-2xl p-5 border border-teal-200/80 dark:border-teal-900/50 space-y-2">
+          <h3 class="text-sm font-bold text-brand-teal">Onde Está o Maior Lucro Sustentável</h3>
+          <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+            Clientes em contratos <strong>Two year</strong> mantêm apenas 2,7% de saída e sustentam <strong>$78.795/mês</strong> de receita estável. Além disso, clientes com mais de <strong>55 meses</strong> de casa garantem <strong>$98.410/mês</strong> com perda mínima de 6,7%.
+          </p>
+        </div>
+      </div>
+
+    </section>
+
+    <section id="tab-como-melhorar" class="tab-panel hidden space-y-6">
+
+      <div class="rounded-2xl p-6 bg-gradient-to-r from-brand-teal via-[#23887c] to-brand-blue text-white shadow-sm">
+        <div class="space-y-1.5 max-w-3xl">
+          <div class="text-xs font-bold uppercase tracking-wider text-teal-100">
+            Vértice Data Consulting · Recomendações para a Terra Signal
+          </div>
+          <h2 class="text-lg sm:text-xl font-extrabold">Por que os Clientes Saem e Como Melhorar a Retenção</h2>
+          <p class="text-xs sm:text-sm text-teal-50/90 leading-relaxed">
+            Resumo prático das principais causas descobertas na análise e das ações diretas que a Terra Signal pode aplicar no comercial, no atendimento e nos planos para reduzir os cancelamentos.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-2.5">
+          <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-brand-red dark:bg-red-950 dark:text-red-300">1. Primeiros 9 Meses</span>
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white">Acompanhamento forte na entrada</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            <strong>Por que saem:</strong> Quase metade dos clientes novos (49,4%) cancela nos primeiros 9 meses.
+          </p>
+          <p class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+            <strong>Como melhorar:</strong> Fazer contato ativo no 1º, 3º e 6º mês para checar se a internet está boa, tirar dúvidas da fatura e resolver problemas antes que o cliente decida sair.
+          </p>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-2.5">
+          <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-brand-red dark:bg-red-950 dark:text-red-300">2. Contrato Mensal</span>
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white">Incentivar planos de 1 e 2 anos</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            <strong>Por que saem:</strong> Quem está no contrato mensal (43,1% de saída) concentra quase 89% do prejuízo financeiro.
+          </p>
+          <p class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+            <strong>Como melhorar:</strong> Oferecer desconto na mensalidade ou bônus de velocidade para migrar clientes do plano mensal para contratos de 1 ano (11,4% de saída) ou 2 anos (2,7% de saída).
+          </p>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-2.5">
+          <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">3. Fibra Óptica &amp; Preço</span>
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white">Revisar qualidade e valor da fibra</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            <strong>Por que saem:</strong> Clientes de fibra pagam mais caro e têm 41,9% de saída; os feedbacks citam preço alto, lentidão e quedas.
+          </p>
+          <p class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+            <strong>Como melhorar:</strong> Melhorar a estabilidade da rede de fibra e incluir benefícios no pacote para o cliente sentir que o preço pago vale a pena.
+          </p>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-2.5">
+          <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-brand-navy dark:bg-sky-950 dark:text-sky-300">4. Segurança &amp; Suporte</span>
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white">Incluir suporte e segurança no plano</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            <strong>Por que saem:</strong> Quem não tem segurança online ou suporte técnico sai mais de 41%, contra cerca de 15% de quem tem.
+          </p>
+          <p class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+            <strong>Como melhorar:</strong> Oferecer suporte técnico prioritário e segurança online grátis nos primeiros meses ou embutidos nos planos de fibra para aumentar a fidelidade.
+          </p>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-2.5">
+          <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-brand-navy dark:bg-sky-950 dark:text-sky-300">5. Forma de Pagamento</span>
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white">Migrar para pagamento automático</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            <strong>Por que saem:</strong> Pagamento via cheque eletrônico tem 45,4% de cancelamento, enquanto cartão e débito automático ficam perto de 16%.
+          </p>
+          <p class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+            <strong>Como melhorar:</strong> Dar um pequeno desconto na fatura para clientes que ativarem débito automático ou cartão de crédito recorrente.
+          </p>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-2.5">
+          <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-brand-teal dark:bg-teal-950 dark:text-teal-300">6. Atendimento &amp; Idosos</span>
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white">Atenção especial ao público idoso</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            <strong>Por que saem:</strong> Clientes idosos cancelam 41,9% (contra 23,7% dos demais) e os comentários apontam frustração com suporte e fatura.
+          </p>
+          <p class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+            <strong>Como melhorar:</strong> Criar um canal de atendimento mais simples e direto, com explicação clara da conta e resposta rápida para feedbacks negativos.
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white">Resultado Esperado com Essas Melhorias</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
+            Focando nos clientes recém-chegados de fibra em contrato mensal e reduzindo em apenas 25% o volume atual de cancelamentos, a <strong>Terra Signal</strong> pode recuperar cerca de <strong>+$27.990 por mês</strong> (mais de <strong>$335 mil por ano</strong>) em receita preservada.
+          </p>
+        </div>
+        <button onclick="switchTab('simulador')" class="px-4 py-2.5 rounded-xl text-xs font-semibold bg-brand-navy text-white hover:bg-brand-blue transition shadow-sm shrink-0">
+          Testar cenários no Simulador →
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
+    Vértice Data Consulting × Terra Signal · Análise Exploratória de Churn e Retenção
+  </footer>
+
+  <script>
+    const DEFAULT_RELACAO = [
+      { coluna: 'tempo_permanencia_meses', valor: '0 a 9 meses', clientes: 1485, taxa_saida: 49.4, diferenca_pp: 22.7 },
+      { coluna: 'tempo_permanencia_meses', valor: '9 a 29 meses', clientes: 1383, taxa_saida: 28.1, diferenca_pp: 1.4 },
+      { coluna: 'tempo_permanencia_meses', valor: '29 a 55 meses', clientes: 1358, taxa_saida: 18.6, diferenca_pp: -8.1 },
+      { coluna: 'tempo_permanencia_meses', valor: '55 a 72 meses', clientes: 1408, taxa_saida: 6.7, diferenca_pp: -20.0 },
+      { coluna: 'tipo_contrato', valor: 'Month-to-month', clientes: 3102, taxa_saida: 43.1, diferenca_pp: 16.4 },
+      { coluna: 'tipo_contrato', valor: 'One year', clientes: 1184, taxa_saida: 11.4, diferenca_pp: -15.3 },
+      { coluna: 'tipo_contrato', valor: 'Two year', clientes: 1348, taxa_saida: 2.7, diferenca_pp: -24.0 },
+      { coluna: 'servico_internet', valor: 'Fiber optic', clientes: 2479, taxa_saida: 41.9, diferenca_pp: 15.2 },
+      { coluna: 'servico_internet', valor: 'DSL', clientes: 1938, taxa_saida: 19.1, diferenca_pp: -7.6 },
+      { coluna: 'servico_internet', valor: 'No', clientes: 1217, taxa_saida: 7.6, diferenca_pp: -19.1 },
+      { coluna: 'seguranca_online', valor: 'No', clientes: 2801, taxa_saida: 41.8, diferenca_pp: 15.1 },
+      { coluna: 'seguranca_online', valor: 'Yes', clientes: 1616, taxa_saida: 14.8, diferenca_pp: -11.9 },
+      { coluna: 'seguranca_online', valor: 'No internet service', clientes: 1217, taxa_saida: 7.6, diferenca_pp: -19.1 },
+      { coluna: 'suporte_tecnico', valor: 'No', clientes: 2777, taxa_saida: 41.7, diferenca_pp: 15.0 },
+      { coluna: 'suporte_tecnico', valor: 'Yes', clientes: 1640, taxa_saida: 15.4, diferenca_pp: -11.3 },
+      { coluna: 'suporte_tecnico', valor: 'No internet service', clientes: 1217, taxa_saida: 7.6, diferenca_pp: -19.1 },
+      { coluna: 'metodo_pagamento', valor: 'Electronic check', clientes: 1893, taxa_saida: 45.4, diferenca_pp: 18.7 },
+      { coluna: 'metodo_pagamento', valor: 'Mailed check', clientes: 1290, taxa_saida: 19.3, diferenca_pp: -7.4 },
+      { coluna: 'metodo_pagamento', valor: 'Bank transfer (automatic)', clientes: 1236, taxa_saida: 17.0, diferenca_pp: -9.7 },
+      { coluna: 'metodo_pagamento', valor: 'Credit card (automatic)', clientes: 1215, taxa_saida: 15.4, diferenca_pp: -11.3 },
+      { coluna: 'backup_online', valor: 'No', clientes: 2472, taxa_saida: 40.0, diferenca_pp: 13.3 },
+      { coluna: 'backup_online', valor: 'Yes', clientes: 1945, taxa_saida: 21.8, diferenca_pp: -4.9 },
+      { coluna: 'backup_online', valor: 'No internet service', clientes: 1217, taxa_saida: 7.6, diferenca_pp: -19.1 },
+      { coluna: 'protecao_dispositivo', valor: 'No', clientes: 2477, taxa_saida: 39.2, diferenca_pp: 12.5 },
+      { coluna: 'protecao_dispositivo', valor: 'Yes', clientes: 1940, taxa_saida: 22.8, diferenca_pp: -3.9 },
+      { coluna: 'protecao_dispositivo', valor: 'No internet service', clientes: 1217, taxa_saida: 7.6, diferenca_pp: -19.1 },
+      { coluna: 'cobranca_total', valor: '402 a 1.398', clientes: 1409, taxa_saida: 28.9, diferenca_pp: 2.2 },
+      { coluna: 'cobranca_total', valor: '1.398 a 3.795', clientes: 1408, taxa_saida: 23.2, diferenca_pp: -3.5 },
+      { coluna: 'cobranca_total', valor: '3.795 a 8.685', clientes: 1409, taxa_saida: 14.5, diferenca_pp: -12.2 },
+      { coluna: 'cobranca_total', valor: '19 a 402', clientes: 1408, taxa_saida: 40.1, diferenca_pp: 13.4 },
+      { coluna: 'streaming_filmes', valor: 'No', clientes: 2228, taxa_saida: 33.9, diferenca_pp: 7.2 },
+      { coluna: 'streaming_filmes', valor: 'Yes', clientes: 2189, taxa_saida: 30.2, diferenca_pp: 3.5 },
+      { coluna: 'streaming_filmes', valor: 'No internet service', clientes: 1217, taxa_saida: 7.6, diferenca_pp: -19.1 },
+      { coluna: 'streaming_tv', valor: 'No', clientes: 2248, taxa_saida: 33.8, diferenca_pp: 7.1 },
+      { coluna: 'streaming_tv', valor: 'Yes', clientes: 2169, taxa_saida: 30.3, diferenca_pp: 3.6 },
+      { coluna: 'streaming_tv', valor: 'No internet service', clientes: 1217, taxa_saida: 7.6, diferenca_pp: -19.1 },
+      { coluna: 'cobranca_mensal', valor: '70 a 90', clientes: 1407, taxa_saida: 36.1, diferenca_pp: 9.4 },
+      { coluna: 'cobranca_mensal', valor: '90 a 119', clientes: 1409, taxa_saida: 33.0, diferenca_pp: 6.3 },
+      { coluna: 'cobranca_mensal', valor: '36 a 70', clientes: 1409, taxa_saida: 26.2, diferenca_pp: -0.5 },
+      { coluna: 'cobranca_mensal', valor: '18 a 36', clientes: 1409, taxa_saida: 11.4, diferenca_pp: -15.3 },
+      { coluna: 'idoso', valor: 'Sim', clientes: 915, taxa_saida: 41.9, diferenca_pp: 15.2 },
+      { coluna: 'idoso', valor: 'Não', clientes: 4719, taxa_saida: 23.7, diferenca_pp: -3.0 },
+      { coluna: 'fatura_digital', valor: 'Yes', clientes: 3337, taxa_saida: 33.7, diferenca_pp: 7.0 },
+      { coluna: 'fatura_digital', valor: 'No', clientes: 2297, taxa_saida: 16.5, diferenca_pp: -10.2 },
+      { coluna: 'possui_dependentes', valor: 'No', clientes: 3948, taxa_saida: 31.4, diferenca_pp: 4.7 },
+      { coluna: 'possui_dependentes', valor: 'Yes', clientes: 1686, taxa_saida: 15.7, diferenca_pp: -11.0 },
+      { coluna: 'possui_companheiro', valor: 'No', clientes: 2911, taxa_saida: 33.1, diferenca_pp: 6.4 },
+      { coluna: 'possui_companheiro', valor: 'Yes', clientes: 2723, taxa_saida: 19.8, diferenca_pp: -6.9 },
+      { coluna: 'multiplas_linhas', valor: 'Yes', clientes: 2376, taxa_saida: 28.8, diferenca_pp: 2.1 },
+      { coluna: 'multiplas_linhas', valor: 'No', clientes: 2714, taxa_saida: 25.1, diferenca_pp: -1.6 },
+      { coluna: 'multiplas_linhas', valor: 'No phone service', clientes: 544, taxa_saida: 25.2, diferenca_pp: -1.5 },
+      { coluna: 'servico_telefone', valor: 'Yes', clientes: 5090, taxa_saida: 26.8, diferenca_pp: 0.1 },
+      { coluna: 'servico_telefone', valor: 'No', clientes: 544, taxa_saida: 25.2, diferenca_pp: -1.5 },
+      { coluna: 'genero', valor: 'Female', clientes: 2792, taxa_saida: 27.1, diferenca_pp: 0.4 },
+      { coluna: 'genero', valor: 'Male', clientes: 2842, taxa_saida: 26.3, diferenca_pp: -0.4 },
+      { coluna: 'tipo_conexao', valor: 'Unknown', clientes: 1412, taxa_saida: 27.3, diferenca_pp: 0.6 },
+      { coluna: 'tipo_conexao', valor: '4G', clientes: 1429, taxa_saida: 26.8, diferenca_pp: 0.1 },
+      { coluna: 'tipo_conexao', valor: '5G', clientes: 1384, taxa_saida: 26.6, diferenca_pp: -0.1 },
+      { coluna: 'tipo_conexao', valor: 'ADSL', clientes: 1409, taxa_saida: 26.0, diferenca_pp: -0.7 }
+    ];
+
+    const DEFAULT_DEMO_STACKED = {
+      sim: { total: 915, taxa: 41.9, mulher: 21.1, homem: 20.8 },
+      nao: { total: 4719, taxa: 23.7, mulher: 12.0, homem: 11.7 }
+    };
+
+    const WORDS_CANCELOU = [
+      { word: 'price', count: 312 }, { word: 'support', count: 278 }, { word: 'slow', count: 245 },
+      { word: 'expensive', count: 229 }, { word: 'billing', count: 198 }, { word: 'cancel', count: 187 },
+      { word: 'outage', count: 174 }, { word: 'waiting', count: 161 }, { word: 'competitor', count: 152 },
+      { word: 'frustrated', count: 144 }, { word: 'increase', count: 136 }, { word: 'connection', count: 129 },
+      { word: 'poor', count: 118 }, { word: 'dropped', count: 112 }, { word: 'fee', count: 105 },
+      { word: 'terrible', count: 98 }, { word: 'fiber', count: 91 }, { word: 'unresolved', count: 84 }
+    ];
+
+    const WORDS_RETIDO = [
+      { word: 'reliable', count: 428 }, { word: 'fast', count: 392 }, { word: 'great', count: 365 },
+      { word: 'stable', count: 341 }, { word: 'helpful', count: 298 }, { word: 'satisfied', count: 276 },
+      { word: 'value', count: 251 }, { word: 'smooth', count: 228 }, { word: 'years', count: 214 },
+      { word: 'easy', count: 196 }, { word: 'consistent', count: 183 }, { word: 'recommend', count: 172 },
+      { word: 'quick', count: 159 }, { word: 'polite', count: 148 }, { word: 'discount', count: 135 },
+      { word: 'happy', count: 127 }, { word: 'always', count: 119 }, { word: 'excellent', count: 108 }
+    ];
+
+    const COL_LABELS = {
+      tempo_permanencia_meses: 'Tempo de Permanência',
+      tipo_contrato: 'Tipo de Contrato',
+      servico_internet: 'Serviço de Internet',
+      seguranca_online: 'Segurança Online',
+      suporte_tecnico: 'Suporte Técnico',
+      metodo_pagamento: 'Método de Pagamento',
+      backup_online: 'Backup Online',
+      protecao_dispositivo: 'Proteção de Dispositivo',
+      cobranca_total: 'Cobrança Total',
+      streaming_filmes: 'Streaming de Filmes',
+      streaming_tv: 'Streaming de TV',
+      cobranca_mensal: 'Cobrança Mensal',
+      idoso: 'Idoso',
+      fatura_digital: 'Fatura Digital',
+      possui_dependentes: 'Possui Dependentes',
+      possui_companheiro: 'Possui Companheiro',
+      multiplas_linhas: 'Múltiplas Linhas',
+      servico_telefone: 'Serviço de Telefone',
+      genero: 'Gênero',
+      tipo_conexao: 'Tipo de Conexão'
+    };
+
+    const appState = {
+      totalClientes: 5634,
+      qtdSaida: 1503,
+      taxaGeral: 26.7,
+      probMediaSaiu: 31.1,
+      probMediaFicou: 25.1,
+      relacao: [...DEFAULT_RELACAO],
+      demoStacked: JSON.parse(JSON.stringify(DEFAULT_DEMO_STACKED)),
+      simSelection: {}
+    };
+
+    const chartRegistry = {};
+    let extremosHoverBound = false;
+    let extremosColorState = { defaultColors: [], focusColors: [] };
+
+    const fmtPct = (v) => `${Number(v).toFixed(1).replace('.', ',')}%`;
+    const fmtPP = (v) => `${v >= 0 ? '+' : ''}${Number(v).toFixed(1).replace('.', ',')} p.p.`;
+    const fmtInt = (v) => Number(v).toLocaleString('pt-BR');
+    const prettyCol = (col) => COL_LABELS[col] || col.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = type === 'error'
+        ? 'bg-red-600 text-white border-red-700'
+        : type === 'success'
+          ? 'bg-emerald-600 text-white border-emerald-700'
+          : 'bg-slate-900 text-white border-slate-700';
+      toast.className = `px-4 py-3 rounded-xl text-xs font-medium shadow-lg border ${colors} transition-all duration-300`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3600);
+    }
+
+    function computeDerivedMetrics() {
+      const byCol = {};
+      appState.relacao.forEach(row => {
+        if (!byCol[row.coluna]) byCol[row.coluna] = [];
+        byCol[row.coluna].push(row);
+      });
+
+      const impacto = Object.entries(byCol).map(([coluna, rows]) => {
+        const sorted = [...rows].sort((a, b) => b.taxa_saida - a.taxa_saida);
+        const pior = sorted[0];
+        const melhor = sorted[sorted.length - 1];
+        return {
+          coluna,
+          piorRow: pior,
+          melhorRow: melhor,
+          impacto_pp: +(pior.taxa_saida - melhor.taxa_saida).toFixed(2),
+          rows
+        };
+      }).sort((a, b) => b.impacto_pp - a.impacto_pp);
+
+      return { byCol, impacto };
+    }
+
+    function getThemeColors() {
+      const isDark = document.documentElement.classList.contains('dark');
+      return {
+        isDark,
+        text: isDark ? '#CBD5E1' : '#334155',
+        muted: isDark ? '#64748B' : '#94A3B8',
+        grid: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(148, 163, 184, 0.22)'
+      };
+    }
+
+    const verticalLinePlugin = {
+      id: 'verticalLinePlugin',
+      afterDatasetsDraw(chart, args, options) {
+        if (!options || options.value === undefined) return;
+        const { ctx, chartArea: { top, bottom }, scales: { x } } = chart;
+        if (!x) return;
+        const xPos = x.getPixelForValue(options.value);
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([5, 5]);
+        ctx.lineWidth = options.width || 1.5;
+        ctx.strokeStyle = options.color || '#1D3557';
+        ctx.moveTo(xPos, top);
+        ctx.lineTo(xPos, bottom);
+        ctx.stroke();
+        ctx.restore();
+      }
+    };
+
+    function destroyChart(id) {
+      if (chartRegistry[id]) {
+        chartRegistry[id].destroy();
+        delete chartRegistry[id];
+      }
+    }
+
+    function renderOverviewCharts() {
+      const theme = getThemeColors();
+      const { impacto } = computeDerivedMetrics();
+
+      destroyChart('carteira');
+      const ctxCarteira = document.getElementById('chart-carteira');
+      if (ctxCarteira && typeof Chart !== 'undefined') {
+        const retidos = appState.totalClientes - appState.qtdSaida;
+        const pctRetidos = +(100 - appState.taxaGeral).toFixed(1);
+        chartRegistry['carteira'] = new Chart(ctxCarteira, {
+          type: 'doughnut',
+          data: {
+            labels: [
+              `Permaneceram (${fmtPct(pctRetidos)})`,
+              `Cancelaram (${fmtPct(appState.taxaGeral)})`
+            ],
+            datasets: [{
+              data: [retidos, appState.qtdSaida],
+              backgroundColor: ['#2A9D8F', '#E63946'],
+              borderColor: theme.isDark ? '#0F172A' : '#FFFFFF',
+              borderWidth: 3,
+              hoverOffset: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '62%',
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  color: theme.text,
+                  padding: 16,
+                  font: { size: 12, weight: '600' }
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.label}: ${fmtInt(ctx.parsed)} clientes`
+                }
+              }
+            }
+          }
+        });
+      }
+
+      destroyChart('demografia');
+      const ctxDemo = document.getElementById('chart-demografia');
+      if (ctxDemo && typeof Chart !== 'undefined') {
+        const dSim = appState.demoStacked.sim;
+        const dNao = appState.demoStacked.nao;
+        chartRegistry['demografia'] = new Chart(ctxDemo, {
+          type: 'bar',
+          data: {
+            labels: [
+              `Idoso: Sim (${fmtPct(dSim.taxa)})`,
+              `Idoso: Não (${fmtPct(dNao.taxa)})`
+            ],
+            datasets: [
+              {
+                label: 'Mulher',
+                data: [dSim.mulher, dNao.mulher],
+                backgroundColor: '#E76F51',
+                borderRadius: { topLeft: 6, bottomLeft: 6 },
+                barThickness: 34
+              },
+              {
+                label: 'Homem',
+                data: [dSim.homem, dNao.homem],
+                backgroundColor: '#457B9D',
+                borderRadius: { topRight: 6, bottomRight: 6 },
+                barThickness: 34
+              }
+            ]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              verticalLinePlugin: { value: appState.taxaGeral, color: theme.isDark ? '#38BDF8' : '#1D3557', width: 1.5 },
+              tooltip: {
+                callbacks: {
+                  label: ctx => {
+                    const group = ctx.dataIndex === 0 ? dSim : dNao;
+                    return `${ctx.dataset.label}: ${fmtPct(ctx.parsed.x)} da taxa total (${fmtPct(group.taxa)} no grupo de ${fmtInt(group.total)} clientes)`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                stacked: true,
+                beginAtZero: true,
+                max: 55,
+                ticks: { color: theme.text, callback: v => `${v}%`, font: { size: 11 } },
+                grid: { color: theme.grid }
+              },
+              y: {
+                stacked: true,
+                ticks: { color: theme.text, font: { size: 12, weight: '600' } },
+                grid: { display: false }
+              }
+            }
+          },
+          plugins: [verticalLinePlugin]
+        });
+      }
+
+      const top6 = impacto.slice(0, 6);
+      const grid = document.getElementById('top6-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      top6.forEach((item, idx) => {
+        const card = document.createElement('div');
+        card.className = 'rounded-xl p-4 bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/70 flex flex-col justify-between';
+        const canvasId = `chart-top6-${idx}`;
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <h3 class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">${prettyCol(item.coluna)}</h3>
+            <span title="Diferença em pontos percentuais entre o pior e o melhor valor" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 dark:bg-sky-950 text-brand-navy dark:text-sky-300 shrink-0">
+              ${item.impacto_pp.toFixed(1).replace('.', ',')} p.p.
+            </span>
+          </div>
+          <div class="h-44 relative">
+            <canvas id="${canvasId}"></canvas>
+          </div>
+        `;
+        grid.appendChild(card);
+
+        destroyChart(canvasId);
+        const rows = [...item.rows].sort((a, b) => b.taxa_saida - a.taxa_saida);
+        const maxTaxa = Math.max(...rows.map(r => r.taxa_saida));
+        const minTaxa = Math.min(...rows.map(r => r.taxa_saida));
+
+        const ctx = document.getElementById(canvasId);
+        if (ctx && typeof Chart !== 'undefined') {
+          chartRegistry[canvasId] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: rows.map(r => r.valor),
+              datasets: [{
+                data: rows.map(r => r.taxa_saida),
+                backgroundColor: rows.map(r => r.taxa_saida === maxTaxa ? '#E63946' : r.taxa_saida === minTaxa ? '#2A9D8F' : '#8D99AE'),
+                borderRadius: 5,
+                barThickness: 18
+              }]
+            },
+            options: {
+              indexAxis: 'y',
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                verticalLinePlugin: { value: appState.taxaGeral, color: theme.isDark ? '#38BDF8' : '#1D3557', width: 1.5 },
+                tooltip: {
+                  callbacks: {
+                    label: c => `Saída: ${fmtPct(rows[c.dataIndex].taxa_saida)} (${fmtInt(rows[c.dataIndex].clientes)} clientes)`
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  beginAtZero: true,
+                  max: Math.max(55, Math.ceil(maxTaxa / 10) * 10),
+                  ticks: { color: theme.text, font: { size: 10 }, callback: v => `${v}%` },
+                  grid: { color: theme.grid }
+                },
+                y: {
+                  ticks: { color: theme.text, font: { size: 10 } },
+                  grid: { display: false }
+                }
+              }
+            },
+            plugins: [verticalLinePlugin]
+          });
+        }
+      });
+    }
+
+    function renderImpactoAndFatores() {
+      const theme = getThemeColors();
+
+      destroyChart('extremos');
+      const aumentam = appState.relacao.filter(r => r.diferenca_pp > 0).sort((a, b) => b.diferenca_pp - a.diferenca_pp).slice(0, 12);
+      const reduzem = appState.relacao.filter(r => r.diferenca_pp < 0).sort((a, b) => a.diferenca_pp - b.diferenca_pp).slice(0, 12);
+      const extremos = [...aumentam, ...reduzem].sort((a, b) => b.diferenca_pp - a.diferenca_pp);
+
+      const top3Mais = aumentam.slice(0, 3);
+      const top3Menos = reduzem.slice(0, 3);
+
+      const peekExt = document.getElementById('peek-extremos-top3');
+      if (peekExt) {
+        peekExt.innerHTML = `
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="font-bold text-brand-red">Top 3 que mais aumentam:</span>
+            ${top3Mais.map((r, i) => `
+              <span class="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 border border-red-200/80 dark:border-red-900 text-slate-800 dark:text-slate-100 font-semibold">
+                ${i + 1}. ${prettyCol(r.coluna)} (${r.valor}): ${fmtPP(r.diferenca_pp)}
+              </span>
+            `).join('')}
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="font-bold text-brand-teal">Top 3 que mais reduzem:</span>
+            ${top3Menos.map((r, i) => `
+              <span class="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 border border-teal-200/80 dark:border-teal-900 text-slate-800 dark:text-slate-100 font-semibold">
+                ${i + 1}. ${prettyCol(r.coluna)} (${r.valor}): ${fmtPP(r.diferenca_pp)}
+              </span>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      const defaultColors = extremos.map(r => r.diferenca_pp >= 0 ? '#E63946' : '#2A9D8F');
+      const focusColors = extremos.map((r, idx) => {
+        const isTop3Mais = idx < 3;
+        const isTop3Menos = idx >= extremos.length - 3;
+        if (isTop3Mais) return '#E63946';
+        if (isTop3Menos) return '#2A9D8F';
+        return r.diferenca_pp >= 0 ? 'rgba(230, 57, 70, 0.20)' : 'rgba(42, 157, 143, 0.20)';
+      });
+      extremosColorState = { defaultColors, focusColors };
+
+      const ctxExt = document.getElementById('chart-extremos');
+      if (ctxExt && typeof Chart !== 'undefined') {
+        chartRegistry['extremos'] = new Chart(ctxExt, {
+          type: 'bar',
+          data: {
+            labels: extremos.map(r => `${prettyCol(r.coluna)} = ${r.valor}`),
+            datasets: [{
+              label: 'Diferença vs. Média (p.p.)',
+              data: extremos.map(r => +r.diferenca_pp.toFixed(1)),
+              backgroundColor: [...defaultColors],
+              borderRadius: 4
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              verticalLinePlugin: { value: 0, color: theme.text, width: 1 },
+              tooltip: {
+                callbacks: {
+                  label: ctx => {
+                    const r = extremos[ctx.dataIndex];
+                    return `${fmtPP(r.diferenca_pp)} vs. média | Taxa: ${fmtPct(r.taxa_saida)} (${fmtInt(r.clientes)} clientes)`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: { ticks: { color: theme.text, font: { size: 10 }, callback: v => `${v > 0 ? '+' : ''}${v} p.p.` }, grid: { color: theme.grid } },
+              y: { ticks: { color: theme.text, font: { size: 10 } }, grid: { display: false } }
+            }
+          },
+          plugins: [verticalLinePlugin]
+        });
+      }
+
+      const cardExt = document.getElementById('card-extremos');
+      if (cardExt && !extremosHoverBound) {
+        extremosHoverBound = true;
+        cardExt.addEventListener('mouseenter', () => {
+          const ch = chartRegistry['extremos'];
+          if (!ch) return;
+          ch.data.datasets[0].backgroundColor = [...extremosColorState.focusColors];
+          ch.update('none');
+        });
+        cardExt.addEventListener('mouseleave', () => {
+          const ch = chartRegistry['extremos'];
+          if (!ch) return;
+          ch.data.datasets[0].backgroundColor = [...extremosColorState.defaultColors];
+          ch.update('none');
+        });
+      }
+    }
+
+    function renderPerfis() {
+      const { impacto } = computeDerivedMetrics();
+
+      const avgPior = impacto.reduce((acc, i) => acc + i.piorRow.taxa_saida, 0) / impacto.length;
+      const avgMelhor = impacto.reduce((acc, i) => acc + i.melhorRow.taxa_saida, 0) / impacto.length;
+      document.getElementById('avg-pior').textContent = fmtPct(avgPior);
+      document.getElementById('avg-melhor').textContent = fmtPct(avgMelhor);
+
+      const listPior = document.getElementById('list-pior-perfil');
+      const listMelhor = document.getElementById('list-melhor-perfil');
+
+      listPior.innerHTML = impacto.map(i => `
+        <div class="px-5 py-3 flex items-center justify-between gap-3 text-xs">
+          <div>
+            <div class="font-semibold text-slate-800 dark:text-slate-100">${prettyCol(i.coluna)}</div>
+            <div class="text-slate-500 dark:text-slate-400">${i.piorRow.valor}</div>
+          </div>
+          <span class="font-bold text-brand-red tabular-nums">${fmtPct(i.piorRow.taxa_saida)}</span>
+        </div>
+      `).join('');
+
+      listMelhor.innerHTML = impacto.map(i => `
+        <div class="px-5 py-3 flex items-center justify-between gap-3 text-xs">
+          <div>
+            <div class="font-semibold text-slate-800 dark:text-slate-100">${prettyCol(i.coluna)}</div>
+            <div class="text-slate-500 dark:text-slate-400">${i.melhorRow.valor}</div>
+          </div>
+          <span class="font-bold text-brand-teal tabular-nums">${fmtPct(i.melhorRow.taxa_saida)}</span>
+        </div>
+      `).join('');
+    }
+
+    function renderFeedbackNLP() {
+      const theme = getThemeColors();
+      const cloudCancelou = document.getElementById('cloud-cancelou');
+      const cloudRetido = document.getElementById('cloud-retido');
+
+      const renderCloud = (container, words, variant) => {
+        const maxC = Math.max(...words.map(w => w.count));
+        const minC = Math.min(...words.map(w => w.count));
+        container.innerHTML = words.map(w => {
+          const ratio = (w.count - minC) / (maxC - minC || 1);
+          const fontSize = (0.78 + ratio * 0.72).toFixed(2);
+          const cls = variant === 'neg'
+            ? 'bg-white dark:bg-slate-900 text-brand-red border-red-200 dark:border-red-900/60'
+            : 'bg-white dark:bg-slate-900 text-brand-teal border-teal-200 dark:border-teal-900/60';
+          return `
+            <span style="font-size: ${fontSize}rem" class="word-chip inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold border shadow-2xs ${cls}">
+              <span>${w.word}</span>
+              <span class="text-[10px] opacity-65 font-normal">${w.count}</span>
+            </span>
+          `;
+        }).join('');
+      };
+
+      renderCloud(cloudCancelou, WORDS_CANCELOU, 'neg');
+      renderCloud(cloudRetido, WORDS_RETIDO, 'pos');
+
+      destroyChart('feedbackSentimento');
+      const ctxSent = document.getElementById('chart-feedback-sentimento');
+      if (ctxSent && typeof Chart !== 'undefined') {
+        chartRegistry['feedbackSentimento'] = new Chart(ctxSent, {
+          type: 'bar',
+          data: {
+            labels: ['Clientes que Cancelaram', 'Clientes Retidos', 'Total da Base'],
+            datasets: [
+              {
+                label: 'Nota Negativa (%)',
+                data: [91.4, 15.4, 35.7],
+                backgroundColor: '#E63946',
+                borderRadius: 6,
+                barThickness: 26
+              },
+              {
+                label: 'Nota Positiva (%)',
+                data: [8.6, 84.6, 64.3],
+                backgroundColor: '#2A9D8F',
+                borderRadius: 6,
+                barThickness: 26
+              }
+            ]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtPct(ctx.parsed.x)}` } }
+            },
+            scales: {
+              x: {
+                stacked: true,
+                max: 100,
+                ticks: { color: theme.text, font: { size: 11 }, callback: v => `${v}%` },
+                grid: { color: theme.grid }
+              },
+              y: {
+                stacked: true,
+                ticks: { color: theme.text, font: { size: 11, weight: '600' } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function renderFinanceiro() {
+      const theme = getThemeColors();
+
+      const lucroLabels = [
+        'Permanência: 55 a 72 meses',
+        'Contrato: Two year',
+        'Sem Internet (Plano Básico)',
+        'Cobrança Total: 3.795 a 8.685',
+        'Idoso: Não',
+        'Pagamento: Credit card (auto)'
+      ];
+      const lucroValores = [98410, 78795, 23805, 81420, 211680, 73450];
+
+      destroyChart('finLucro');
+      const ctxLucro = document.getElementById('chart-fin-lucro');
+      if (ctxLucro && typeof Chart !== 'undefined') {
+        chartRegistry['finLucro'] = new Chart(ctxLucro, {
+          type: 'bar',
+          data: {
+            labels: lucroLabels,
+            datasets: [{
+              label: 'Rendimento Mensal Retido ($)',
+              data: lucroValores,
+              backgroundColor: '#2A9D8F',
+              borderRadius: 6,
+              barThickness: 22
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: ctx => `Rendimento mensal: $${fmtInt(ctx.parsed.x)}` } }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: { color: theme.text, font: { size: 10 }, callback: v => `$${(v / 1000).toFixed(0)}k` },
+                grid: { color: theme.grid }
+              },
+              y: {
+                ticks: { color: theme.text, font: { size: 10.5, weight: '500' } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+
+      const prejuizoLabels = [
+        'Contrato: Month-to-month',
+        'Internet: Fiber optic',
+        'Sem Segurança Online',
+        'Sem Suporte Técnico',
+        'Pagamento: Electronic check',
+        'Permanência: 0 a 9 meses'
+      ];
+      const prejuizoValores = [99518, 91468, 88240, 87110, 66850, 48920];
+
+      destroyChart('finPrejuizo');
+      const ctxPrejuizo = document.getElementById('chart-fin-prejuizo');
+      if (ctxPrejuizo && typeof Chart !== 'undefined') {
+        chartRegistry['finPrejuizo'] = new Chart(ctxPrejuizo, {
+          type: 'bar',
+          data: {
+            labels: prejuizoLabels,
+            datasets: [{
+              label: 'Prejuízo Mensal Direto ($)',
+              data: prejuizoValores,
+              backgroundColor: '#E63946',
+              borderRadius: 6,
+              barThickness: 22
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: ctx => `Prejuízo mensal: -$${fmtInt(ctx.parsed.x)}` } }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: { color: theme.text, font: { size: 10 }, callback: v => `-$${(v / 1000).toFixed(0)}k` },
+                grid: { color: theme.grid }
+              },
+              y: {
+                ticks: { color: theme.text, font: { size: 10.5, weight: '500' } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function initSimulatorControls() {
+      const { impacto } = computeDerivedMetrics();
+      const grid = document.getElementById('sim-controls-grid');
+      grid.innerHTML = '';
+
+      impacto.forEach(item => {
+        if (!appState.simSelection[item.coluna]) {
+          const closest = [...item.rows].sort((a, b) => Math.abs(a.diferenca_pp) - Math.abs(b.diferenca_pp))[0];
+          appState.simSelection[item.coluna] = closest.valor;
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/70 space-y-1.5';
+        const optionsHtml = item.rows.map(r => `
+          <option value="${r.valor}" ${appState.simSelection[item.coluna] === r.valor ? 'selected' : ''}>
+            ${r.valor} (${fmtPct(r.taxa_saida)})
+          </option>
+        `).join('');
+
+        wrapper.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <label class="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">${prettyCol(item.coluna)}</label>
+            <span class="text-[10px] font-medium text-slate-400">${item.impacto_pp.toFixed(1).replace('.', ',')} p.p.</span>
+          </div>
+          <select data-sim-col="${item.coluna}" class="sim-select w-full px-2.5 py-1.5 rounded-lg text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-blue">
+            ${optionsHtml}
+          </select>
+        `;
+        grid.appendChild(wrapper);
+      });
+
+      document.querySelectorAll('.sim-select').forEach(sel => {
+        sel.addEventListener('change', (e) => {
+          appState.simSelection[e.target.dataset.simCol] = e.target.value;
+          updateSimulatorScore();
+        });
+      });
+
+      updateSimulatorScore();
+    }
+
+    function applyPresetToSimulator(preset) {
+      const { impacto } = computeDerivedMetrics();
+      impacto.forEach(item => {
+        if (preset === 'pior') {
+          appState.simSelection[item.coluna] = item.piorRow.valor;
+        } else if (preset === 'melhor') {
+          appState.simSelection[item.coluna] = item.melhorRow.valor;
+        } else {
+          const closest = [...item.rows].sort((a, b) => Math.abs(a.diferenca_pp) - Math.abs(b.diferenca_pp))[0];
+          appState.simSelection[item.coluna] = closest.valor;
+        }
+      });
+
+      initSimulatorControls();
+      switchTab('simulador');
+      showToast(`Perfil "${preset === 'pior' ? 'Pior Caso' : preset === 'melhor' ? 'Melhor Caso' : 'Médio'}" aplicado ao simulador.`, 'info');
+    }
+
+    function updateSimulatorScore() {
+      const { byCol } = computeDerivedMetrics();
+      const selectedRows = [];
+
+      Object.entries(byCol).forEach(([col, rows]) => {
+        const chosenVal = appState.simSelection[col];
+        const found = rows.find(r => r.valor === chosenVal) || rows[0];
+        selectedRows.push(found);
+      });
+
+      const score = selectedRows.reduce((acc, r) => acc + r.taxa_saida, 0) / (selectedRows.length || 1);
+      const diff = score - appState.taxaGeral;
+
+      document.getElementById('sim-score-value').textContent = fmtPct(score);
+      document.getElementById('sim-diff-base').textContent = `${fmtPP(diff)} em relação à taxa geral (${fmtPct(appState.taxaGeral)})`;
+
+      const pctWidth = Math.max(5, Math.min(100, ((score - 10) / 32) * 100));
+      const bar = document.getElementById('sim-progress-bar');
+      const badge = document.getElementById('sim-risk-badge');
+
+      bar.style.width = `${pctWidth}%`;
+
+      if (score >= 31.5) {
+        bar.className = 'h-full bg-brand-red transition-all duration-300 rounded-full';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-brand-red dark:bg-red-950 dark:text-red-300';
+        badge.textContent = 'Alto Risco';
+      } else if (score <= 21.5) {
+        bar.className = 'h-full bg-brand-teal transition-all duration-300 rounded-full';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-brand-teal dark:bg-teal-950 dark:text-teal-300';
+        badge.textContent = 'Baixo Risco';
+      } else {
+        bar.className = 'h-full bg-brand-amber transition-all duration-300 rounded-full';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
+        badge.textContent = 'Risco Moderado';
+      }
+
+      const drivers = [...selectedRows]
+        .sort((a, b) => Math.abs(b.diferenca_pp) - Math.abs(a.diferenca_pp))
+        .slice(0, 5);
+
+      document.getElementById('sim-top-drivers').innerHTML = drivers.map(d => {
+        const isPos = d.diferenca_pp >= 0;
+        return `
+          <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/70 text-xs">
+            <span class="text-slate-700 dark:text-slate-200 truncate pr-2">
+              <strong>${prettyCol(d.coluna)}:</strong> ${d.valor}
+            </span>
+            <span class="font-bold tabular-nums shrink-0 ${isPos ? 'text-brand-red' : 'text-brand-teal'}">
+              ${fmtPP(d.diferenca_pp)}
+            </span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function parseCSVLine(line) {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (ch === ',' && !inQuotes) {
+          result.push(current.trim());
+          current = '';
+        } else {
+          current += ch;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    }
+
+    function quantile(sortedArr, q) {
+      const pos = (sortedArr.length - 1) * q;
+      const base = Math.floor(pos);
+      const rest = pos - base;
+      if (sortedArr[base + 1] !== undefined) {
+        return sortedArr[base] + rest * (sortedArr[base + 1] - sortedArr[base]);
+      }
+      return sortedArr[base];
+    }
+
+    function processUploadedCSV(text) {
+      const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+      if (lines.length < 10) throw new Error('O arquivo CSV parece vazio ou incompleto.');
+
+      const headers = parseCSVLine(lines[0]);
+      const targetIdx = headers.indexOf('cancelamento_servico');
+      if (targetIdx === -1) throw new Error('Coluna "cancelamento_servico" não encontrada no CSV.');
+
+      const ignoreCols = new Set(['id_cliente', 'cancelamento_servico', 'feedback_cliente', 'probabilidade_saida']);
+      const rows = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseCSVLine(lines[i]);
+        if (cols.length !== headers.length) continue;
+        const obj = {};
+        headers.forEach((h, idx) => { obj[h] = cols[idx]; });
+        rows.push(obj);
+      }
+
+      const total = rows.length;
+      const saiuCount = rows.filter(r => String(r.cancelamento_servico).toLowerCase() === 'yes').length;
+      const taxaGeral = +((saiuCount / total) * 100).toFixed(1);
+
+      const demoStats = {
+        sim: { total: 0, saiuMulher: 0, saiuHomem: 0 },
+        nao: { total: 0, saiuMulher: 0, saiuHomem: 0 }
+      };
+      rows.forEach(r => {
+        const isSenior = String(r.idoso) === '1' || String(r.idoso).toLowerCase() === 'sim';
+        const bucket = isSenior ? demoStats.sim : demoStats.nao;
+        bucket.total++;
+        if (String(r.cancelamento_servico).toLowerCase() === 'yes') {
+          if (String(r.genero).toLowerCase() === 'female') bucket.saiuMulher++;
+          else bucket.saiuHomem++;
+        }
+      });
+
+      const buildDemoGroup = (st) => {
+        const denom = st.total || 1;
+        const m = +((st.saiuMulher / denom) * 100).toFixed(1);
+        const h = +((st.saiuHomem / denom) * 100).toFixed(1);
+        return { total: st.total, taxa: +(m + h).toFixed(1), mulher: m, homem: h };
+      };
+
+      const candidateCols = headers.filter(h => !ignoreCols.has(h));
+      const newRelacao = [];
+
+      candidateCols.forEach(col => {
+        const rawVals = rows.map(r => r[col]).filter(v => v !== '' && v !== null && v !== undefined);
+        const numVals = rawVals.map(v => Number(v)).filter(v => !Number.isNaN(v));
+        const uniqueCount = new Set(rawVals).size;
+
+        let buckets = new Map();
+
+        if (col === 'idoso') {
+          rows.forEach(r => {
+            const label = String(r[col]) === '1' || String(r[col]).toLowerCase() === 'sim' ? 'Sim' : 'Não';
+            if (!buckets.has(label)) buckets.set(label, { total: 0, saiu: 0 });
+            const b = buckets.get(label);
+            b.total++;
+            if (String(r.cancelamento_servico).toLowerCase() === 'yes') b.saiu++;
+          });
+        } else if (numVals.length === rawVals.length && uniqueCount > 10) {
+          const sorted = [...numVals].sort((a, b) => a - b);
+          const q0 = Math.round(sorted[0]);
+          const q1 = Math.round(quantile(sorted, 0.25));
+          const q2 = Math.round(quantile(sorted, 0.50));
+          const q3 = Math.round(quantile(sorted, 0.75));
+          const q4 = Math.round(sorted[sorted.length - 1]);
+
+          const labels = [
+            `${fmtInt(q0)} a ${fmtInt(q1)}`,
+            `${fmtInt(q1)} a ${fmtInt(q2)}`,
+            `${fmtInt(q2)} a ${fmtInt(q3)}`,
+            `${fmtInt(q3)} a ${fmtInt(q4)}`
+          ];
+
+          rows.forEach(r => {
+            const v = Number(r[col]);
+            if (Number.isNaN(v)) return;
+            const label = v <= q1 ? labels[0] : v <= q2 ? labels[1] : v <= q3 ? labels[2] : labels[3];
+            if (!buckets.has(label)) buckets.set(label, { total: 0, saiu: 0 });
+            const b = buckets.get(label);
+            b.total++;
+            if (String(r.cancelamento_servico).toLowerCase() === 'yes') b.saiu++;
+          });
+        } else {
+          rows.forEach(r => {
+            const label = r[col];
+            if (!label) return;
+            if (!buckets.has(label)) buckets.set(label, { total: 0, saiu: 0 });
+            const b = buckets.get(label);
+            b.total++;
+            if (String(r.cancelamento_servico).toLowerCase() === 'yes') b.saiu++;
+          });
+        }
+
+        buckets.forEach((stats, valor) => {
+          if (stats.total >= 50) {
+            const taxa = +((stats.saiu / stats.total) * 100).toFixed(1);
+            newRelacao.push({
+              coluna: col,
+              valor,
+              clientes: stats.total,
+              taxa_saida: taxa,
+              diferenca_pp: +(taxa - taxaGeral).toFixed(1)
+            });
+          }
+        });
+      });
+
+      const rateLookup = {};
+      newRelacao.forEach(r => {
+        if (!rateLookup[r.coluna]) rateLookup[r.coluna] = {};
+        rateLookup[r.coluna][r.valor] = r.taxa_saida;
+      });
+
+      let sumSaiuProb = 0;
+      let sumFicouProb = 0;
+      rows.forEach(r => {
+        const rates = [];
+        Object.keys(rateLookup).forEach(col => {
+          const val = col === 'idoso' ? (String(r[col]) === '1' ? 'Sim' : 'Não') : r[col];
+          if (rateLookup[col][val] !== undefined) rates.push(rateLookup[col][val]);
+        });
+        const prob = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : taxaGeral;
+        if (String(r.cancelamento_servico).toLowerCase() === 'yes') sumSaiuProb += prob;
+        else sumFicouProb += prob;
+      });
+
+      appState.totalClientes = total;
+      appState.qtdSaida = saiuCount;
+      appState.taxaGeral = taxaGeral;
+      appState.probMediaSaiu = +(sumSaiuProb / (saiuCount || 1)).toFixed(1);
+      appState.probMediaFicou = +(sumFicouProb / ((total - saiuCount) || 1)).toFixed(1);
+      appState.relacao = newRelacao;
+      appState.demoStacked = {
+        sim: buildDemoGroup(demoStats.sim),
+        nao: buildDemoGroup(demoStats.nao)
+      };
+      appState.simSelection = {};
+
+      document.getElementById('data-source-badge').textContent = `CSV Importado (${fmtInt(total)} clientes)`;
+      renderAll();
+      showToast(`CSV carregado com sucesso! ${fmtInt(total)} clientes processados.`, 'success');
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.nav-tab').forEach(btn => {
+        const isActive = btn.dataset.tab === tabId;
+        btn.className = isActive
+          ? 'nav-tab whitespace-nowrap px-4 py-2.5 text-sm font-semibold border-b-2 border-brand-navy text-brand-navy dark:border-sky-400 dark:text-sky-400 transition'
+          : 'nav-tab whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition';
+      });
+
+      document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.toggle('hidden', panel.id !== `tab-${tabId}`);
+      });
+
+      window.dispatchEvent(new Event('resize'));
+    }
+
+    function renderAll() {
+      renderOverviewCharts();
+      renderImpactoAndFatores();
+      renderPerfis();
+      renderFeedbackNLP();
+      renderFinanceiro();
+      initSimulatorControls();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      try {
+        document.querySelectorAll('.nav-tab').forEach(btn => {
+          btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+          document.documentElement.classList.toggle('dark');
+          renderOverviewCharts();
+          renderImpactoAndFatores();
+          renderFeedbackNLP();
+          renderFinanceiro();
+        });
+
+        document.getElementById('csv-upload').addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            try {
+              processUploadedCSV(evt.target.result);
+            } catch (err) {
+              showToast(err.message || 'Erro ao processar o CSV.', 'error');
+            }
+          };
+          reader.readAsText(file, 'UTF-8');
+        });
+
+        renderAll();
+      } catch (err) {
+        console.error('Erro ao inicializar dashboard:', err);
+        showToast('Erro ao carregar visualizações.', 'error');
+      }
+    });
+  </script>
+</body>
+</html>
